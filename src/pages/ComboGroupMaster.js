@@ -180,7 +180,7 @@ function ComboGroupMaster({ sidebarOpen }) {
         ParentComboDishId: group.ParentComboDishId,
         GroupName: group.GroupName,
         DisplayOrder: group.DisplayOrder || 0,
-        MinSelection: group.MinSelection || 1,
+        MinSelection: group.MinSelection !== undefined && group.MinSelection !== null ? group.MinSelection : 1,
         MaxSelection: group.MaxSelection || 1,
         IsMultiSelect: group.IsMultiSelect === true || group.IsMultiSelect === 1,
         IsActive: group.IsActive === true || group.IsActive === 1
