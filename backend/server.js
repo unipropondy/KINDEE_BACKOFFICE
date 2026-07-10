@@ -1084,12 +1084,12 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("ImageId", sql.UniqueIdentifier, imageId)
       //  .input("KitchenType", sql.VarChar(50), "")
       //  .input("SubkitchenType", sql.VarChar(50), "")
-       .input("CreatedBy", sql.UniqueIdentifier, uuidv4())
+        .input("CreatedBy", sql.UniqueIdentifier, uuidv4())
         .input("CreatedOn", sql.DateTime, new Date())
         .query(`
           INSERT INTO DishGroupMaster
           (DishGroupId,DishGroupCode,DishGroupName,SortCode,isActive,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
-          isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,CreatedBy, CreatedOn)
+          isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,CreatedBy,CreatedOn)
           VALUES
           (@DishGroupId,@DishGroupCode,@DishGroupName,@SortCode,@isActive,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
           @isTaxAllowed,@isKitchenPrint,@isServiceCharge,@isMemberSalesAllowed,@CreatedBy,@CreatedOn)
@@ -1140,14 +1140,16 @@ if (Modifiers) {
 }
 
 for (let m of mods) {
+  const modId = typeof m === "object" && m !== null ? m.ModifierId : m;
+
   await pool.request()
     .input("DishGroupId", sql.UniqueIdentifier, dgId)
-    .input("ModifierId", sql.UniqueIdentifier, m)
+    .input("ModifierId", sql.UniqueIdentifier, modId)
     .query(`
       INSERT INTO DishGroupModifier
-      (DishGroupId,ModifierId)
+      (DishGroupId, ModifierId)
       VALUES
-      (@DishGroupId,@ModifierId)
+      (@DishGroupId, @ModifierId)
     `);
 }
 
@@ -1563,9 +1565,10 @@ try {
 }
 
     for (let m of mods) {
+      const modId = typeof m === "object" && m !== null ? m.ModifierId : m;
       await pool.request()
         .input("DishId", sql.UniqueIdentifier, dishId)
-        .input("ModifierId", sql.UniqueIdentifier, m)
+        .input("ModifierId", sql.UniqueIdentifier, modId)
         .query(`
           INSERT INTO DishModifier (DishId, ModifierId)
           VALUES (@DishId, @ModifierId)
@@ -1638,7 +1641,7 @@ for (let item of orderItemShares) {
 }
 
 
-    res.send("Saved ✅");
+    res.json({ message: "Saved ✅", DishId: dishId });
 
   } catch (err) {
     console.error("ERROR ❌", err);
@@ -1718,6 +1721,71 @@ app.get("/dishmodifier/:id", async (req, res) => {
 
   } catch (err) {
     console.log(err);
+    res.status(500).send("Error");
+  }
+});
+
+// ===== DishModifierGroup API — Per-dish Modifier Group selection limits =====
+
+// GET: all modifier group configs for a given dish
+app.get("/dishmodifiergroup/:dishId", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input("DishId", sql.UniqueIdentifier, req.params.dishId)
+      .query(`
+        SELECT
+          dmg.ModifierGroupId,
+          dmg.MinSelectionCount,
+          dmg.MaxSelectionCount,
+          dmg.MultiselectAllow,
+          dgm.DishGroupName
+        FROM DishModifierGroup dmg
+        JOIN DishGroupMaster dgm ON dgm.DishGroupId = dmg.ModifierGroupId
+        WHERE dmg.DishId = @DishId
+      `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error");
+  }
+});
+
+// POST: bulk replace all modifier group configs for a given dish
+// Body: { DishId: string, ModifierGroups: [{ ModifierGroupId, MinSelectionCount, MaxSelectionCount, MultiselectAllow }] }
+app.post("/dishmodifiergroup", async (req, res) => {
+  try {
+    const { DishId, ModifierGroups } = req.body;
+    if (!DishId) return res.status(400).send("DishId required");
+
+    const pool = await poolPromise;
+    const groups = Array.isArray(ModifierGroups) ? ModifierGroups : [];
+
+    // Delete existing mappings for this dish
+    await pool.request()
+      .input("DishId", sql.UniqueIdentifier, DishId)
+      .query("DELETE FROM DishModifierGroup WHERE DishId=@DishId");
+
+    // Insert the new set
+    for (const g of groups) {
+      await pool.request()
+        .input("DishModifierGroupId", sql.UniqueIdentifier, uuidv4())
+        .input("DishId", sql.UniqueIdentifier, DishId)
+        .input("ModifierGroupId", sql.UniqueIdentifier, g.ModifierGroupId)
+        .input("MinSelectionCount", sql.Int, Number(g.MinSelectionCount) || 0)
+        .input("MaxSelectionCount", sql.Int, Number(g.MaxSelectionCount) || 0)
+        .input("MultiselectAllow", sql.Bit, g.MultiselectAllow ? 1 : 0)
+        .query(`
+          INSERT INTO DishModifierGroup
+          (DishModifierGroupId, DishId, ModifierGroupId, MinSelectionCount, MaxSelectionCount, MultiselectAllow)
+          VALUES
+          (@DishModifierGroupId, @DishId, @ModifierGroupId, @MinSelectionCount, @MaxSelectionCount, @MultiselectAllow)
+        `);
+    }
+
+    res.json({ message: "DishModifierGroup saved ✅" });
+  } catch (err) {
+    console.error(err);
     res.status(500).send("Error");
   }
 });

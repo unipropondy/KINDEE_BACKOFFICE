@@ -113,6 +113,10 @@ const [selectedDishGroups, setSelectedDishGroups] = useState([]);
   const [orderItemShare, setOrderItemShare] = useState([]);
  const [selectedOrderItemShare, setSelectedOrderItemShare] = useState([]);
 
+  // 🔥 Per-dish Modifier Group selection config (DishModifierGroup table)
+  // Shape: [{ ModifierGroupId, MinSelectionCount, MaxSelectionCount, MultiselectAllow, DishGroupName }]
+  const [dishModifierGroups, setDishModifierGroups] = useState([]);
+
   useEffect(() => {
   if (showModal && !dish.DishId) {
     setSelecteddishKitchens([]);
@@ -172,9 +176,9 @@ const [selectedDishGroups, setSelectedDishGroups] = useState([]);
 // }
 
   if (!dish.DishGroupId || dish.DishGroupId === "") {
-  alert("Dish Group must be entered. ❗");
-  return;
-}
+    alert("Dish Group must be entered. ❗");
+    return;
+  }
 
   try {
      setLoading(true);
@@ -253,28 +257,53 @@ formData.append(
    if (editIndex !== null && dish.DishId) {
   await axios.put(
     `${BASE_URL}/dish/${dish.DishId}`,
-    formData,   // ✅ IMPORTANT
+    formData,
     { headers: { "Content-Type": "multipart/form-data" } }
   );
+
+  // Save per-dish modifier group selection limits
+  await axios.post(`${BASE_URL}/dishmodifiergroup`, {
+    DishId: dish.DishId,
+    ModifierGroups: dishModifierGroups.map(g => ({
+      ModifierGroupId: g.ModifierGroupId,
+      MinSelectionCount: g.MinSelectionCount || 0,
+      MaxSelectionCount: g.MaxSelectionCount || 0,
+      MultiselectAllow: g.MultiselectAllow ? 1 : 0
+    }))
+  });
 
   alert("Updated ✅");
 
 } else {
-  await axios.post(
+  const saveRes = await axios.post(
     `${BASE_URL}/dish`,
-    formData,   // ✅ IMPORTANT
+    formData,
     { headers: { "Content-Type": "multipart/form-data" } }
   );
+
+  const newDishId = saveRes.data?.DishId;
+  if (newDishId && dishModifierGroups.length > 0) {
+    await axios.post(`${BASE_URL}/dishmodifiergroup`, {
+      DishId: newDishId,
+      ModifierGroups: dishModifierGroups.map(g => ({
+        ModifierGroupId: g.ModifierGroupId,
+        MinSelectionCount: g.MinSelectionCount || 0,
+        MaxSelectionCount: g.MaxSelectionCount || 0,
+        MultiselectAllow: g.MultiselectAllow ? 1 : 0
+      }))
+    });
+  }
 
   alert("Inserted ✅");
 }
 
-    fetchDish();            // 🔥 reload table
+    fetchDish();
     setShowModal(false);
     setDish(emptyDish);
     setEditIndex(null);
     setDishImage(null);
 setExistingImage(null);
+setDishModifierGroups([]);
 
   } catch (err) {
     console.log("SAVE ERROR ❌", err.response?.data || err.message);
@@ -362,6 +391,7 @@ const handleDelete = async (id, e) => {
     setSelecteddishModifiers([]);
     setSelectedDishGroups([]);
     setSelectedOrderItemShare([]);
+    setDishModifierGroups([]);  // ✅ RESET
      setDishImage(null);        // 🔥 ADD THIS
     setExistingImage(null); 
     setEditIndex(null);
@@ -429,6 +459,16 @@ const handleEdit = async (data) => {
   setSelecteddishKitchens(kIds);
   setSelecteddishModifiers(mIds);
   setSelectedDishGroups(dgIds);
+
+  // Load per-dish modifier group selection limits
+  let dmgData = [];
+  try {
+    const dmgRes = await axios.get(`${BASE_URL}/dishmodifiergroup/${data.DishId}`);
+    dmgData = dmgRes.data; // [{ ModifierGroupId, MinSelectionCount, MaxSelectionCount, MultiselectAllow, DishGroupName }]
+  } catch (err) {
+    console.log("DISH MODIFIER GROUP ERROR", err);
+  }
+  setDishModifierGroups(dmgData);
 
   setShowModal(true);
 };
@@ -1014,6 +1054,13 @@ const totalRows = filteredData.length;
         >
           Dish Group
         </button>
+
+          <button
+            className={activeTab === "modifiergroup" ? "active-tab" : ""}
+            onClick={() => setActiveTab("modifiergroup")}
+          >
+            Modifier Group
+          </button>
        {/* <button
   className={activeTab === "orderitemshare" ? "active-tab" : ""}
   onClick={() => setActiveTab("orderitemshare")}
@@ -1163,6 +1210,122 @@ const totalRows = filteredData.length;
     ))}
   </div>
 )}
+
+        {/* 🔥 MODIFIER GROUP TAB — Per-dish selection limits */}
+        {activeTab === "modifiergroup" && (
+          <div style={{ padding: "12px 2px", maxHeight: "380px", overflowY: "auto" }}>
+            {dishGroups.length === 0 && (
+              <p style={{ color: "#888", fontSize: "14px", textAlign: "center", padding: "20px" }}>No modifier groups available. Add groups in the Dish Group page first.</p>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "12px" }}>
+              {dishGroups.map((g) => {
+                const existing = dishModifierGroups.find(x => x.ModifierGroupId === g.DishGroupId);
+                const isChecked = !!existing;
+                return (
+                  <div 
+                    key={g.DishGroupId} 
+                    style={{ 
+                      border: isChecked ? "1.5px solid #ff7a00" : "1px solid #e2e8f0", 
+                      borderRadius: "10px", 
+                      padding: "14px", 
+                      backgroundColor: isChecked ? "#fffbf7" : "#ffffff",
+                      boxShadow: isChecked ? "0 4px 12px rgba(255, 122, 0, 0.08)" : "0 1px 3px rgba(0,0,0,0.02)",
+                      transition: "all 0.15s ease-in-out",
+                      minHeight: "155px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between"
+                    }}
+                  >
+                    <div>
+                      {/* Group header row */}
+                      <label style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "600", fontSize: "14.5px", cursor: "pointer", color: isChecked ? "#d46b08" : "#2d3748", marginBottom: "10px", userSelect: "none" }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          style={{ width: "17px", height: "17px", cursor: "pointer", accentColor: "#ff7a00" }}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setDishModifierGroups(prev => [
+                                ...prev,
+                                { ModifierGroupId: g.DishGroupId, DishGroupName: g.DishGroupName, MinSelectionCount: 0, MaxSelectionCount: 0, MultiselectAllow: false }
+                              ]);
+                            } else {
+                              setDishModifierGroups(prev => prev.filter(x => x.ModifierGroupId !== g.DishGroupId));
+                            }
+                          }}
+                        />
+                        {g.DishGroupName}
+                      </label>
+
+                      {/* Selection limit config */}
+                      {isChecked ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", borderTop: "1px dashed #ffd8bf", paddingTop: "10px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1 }}>
+                              <span style={{ fontSize: "12.5px", color: "#718096", fontWeight: "500" }}>Min:</span>
+                              <select
+                                value={existing.MinSelectionCount || 0}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  setDishModifierGroups(prev => prev.map(x =>
+                                    x.ModifierGroupId === g.DishGroupId ? { ...x, MinSelectionCount: val } : x
+                                  ));
+                                }}
+                                style={{ padding: "4px 8px", fontSize: "13px", borderRadius: "5px", border: "1px solid #cbd5e1", width: "100%", backgroundColor: "#fff", cursor: "pointer" }}
+                              >
+                                {Array.from({ length: 21 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+                              </select>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1 }}>
+                              <span style={{ fontSize: "12.5px", color: "#718096", fontWeight: "500" }}>Max:</span>
+                              <select
+                                value={existing.MaxSelectionCount || 0}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  setDishModifierGroups(prev => prev.map(x =>
+                                    x.ModifierGroupId === g.DishGroupId ? { ...x, MaxSelectionCount: val } : x
+                                  ));
+                                }}
+                                style={{ padding: "4px 8px", fontSize: "13px", borderRadius: "5px", border: "1px solid #cbd5e1", width: "100%", backgroundColor: "#fff", cursor: "pointer" }}
+                              >
+                                {Array.from({ length: 21 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+                              </select>
+                            </div>
+                          </div>
+
+                          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer", color: "#4a5568", fontWeight: "500", userSelect: "none" }}>
+                            <input
+                              type="checkbox"
+                              checked={!!existing.MultiselectAllow}
+                              style={{ cursor: "pointer", accentColor: "#ff7a00" }}
+                              onChange={(e) => {
+                                const val = e.target.checked;
+                                setDishModifierGroups(prev => prev.map(x =>
+                                  x.ModifierGroupId === g.DishGroupId ? { ...x, MultiselectAllow: val } : x
+                                ));
+                              }}
+                            />
+                            Allow Multiselect
+                          </label>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: "12px", color: "#a0aec0", fontStyle: "italic", marginTop: "4px" }}>Not assigned to this dish</div>
+                      )}
+                    </div>
+
+                    {isChecked && (existing.MaxSelectionCount || 0) > 0 && (
+                      <div style={{ fontSize: "11.5px", color: "#d46b08", fontWeight: "600", fontStyle: "italic", textAlign: "right", marginTop: "6px" }}>
+                        Customer selects {existing.MinSelectionCount || 0}–{existing.MaxSelectionCount} item{existing.MaxSelectionCount !== 1 ? "s" : ""}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
 {/* {activeTab === "orderitemshare" && (
   <div className="dish-kitchen-container">

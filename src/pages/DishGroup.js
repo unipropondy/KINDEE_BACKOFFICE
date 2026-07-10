@@ -104,7 +104,7 @@ const handleSubmit = async (e) => {
     return;
   }
 
-    if (!form.CategoryId) {
+  if (!form.CategoryId) {
     alert("Category must be entered. ❗");
     return;
   }
@@ -645,9 +645,9 @@ Show Modifier Tab Order
             checked={selectedModifiers.includes(m.ModifierId)}
             onChange={(e)=>{
               if(e.target.checked){
-                setSelectedModifiers([...selectedModifiers,m.ModifierId]);
+                setSelectedModifiers([...selectedModifiers, m.ModifierId]);
               }else{
-                setSelectedModifiers(selectedModifiers.filter(id=>id!==m.ModifierId));
+                setSelectedModifiers(selectedModifiers.filter(id => id !== m.ModifierId));
               }
             }}
           />
