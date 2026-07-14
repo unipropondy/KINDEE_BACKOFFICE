@@ -1304,42 +1304,75 @@ app.post("/dishgroupkitchen", async (req, res) => {
 });
 //===============================================END dishgroup==========================
 //========================start dish================
-// ================= GET =================
 app.get("/dish", async (req, res) => {
   try {
     const pool = await poolPromise;
-    const result = await pool.request().query(`SELECT 
-    D.*,
+    const result = await pool.request().query(`
+      SELECT 
+        D.DishId,
+        D.DishCode,
+        D.Name,
+        D.ShortName,
+        D.Description,
+        D.DishGroupId,
+        D.CurrentCost,
+        D.SordCode,
+        D.UnitCost,
+        D.QuantityOnHand,
+        D.NameInOtherLanguage,
+        D.BrandId,
+        D.MobileTab,
+        D.AvailableTimeFrom,
+        D.AvailableTimeTo,
+        D.isMultiPrice,
+        D.isOpenitem,
+        D.IsSplitDish,
+        D.IsgroupDish,
+        D.IsShowinKiosk,
+        D.IsActive,
+        D.iskitchenPrint,
+        D.isDiscountAllowed,
+        D.IsTaxAllowed,
+        D.IsStockDish,
+        D.isFOC,
+        D.isServiceCharge,
+        D.isFavourite,
+        D.KitchenType,
+        D.SubkitchenType,
+        D.ImageId,
+        DG.DishGroupName
+      FROM DishMaster D
+      LEFT JOIN DishGroupMaster DG ON D.DishGroupId = DG.DishGroupId
+      ORDER BY DG.DishGroupName ASC, D.Name ASC
+    `);
 
-    DG.DishGroupName,
-
-    (
-      SELECT I.ImageData
-      FROM ImageList I
-      WHERE D.ImageId = I.ImageId
-    ) AS ImageData
-
-FROM DishMaster D
-
-LEFT JOIN DishGroupMaster DG
-ON D.DishGroupId = DG.DishGroupId
-
-ORDER BY DG.DishGroupName ASC, D.Name ASC`);
-    const data = result.recordset.map(row => {
-  let imageBase64 = null;
-
-  if (row.ImageData) {
-    imageBase64 = `data:image/jpeg;base64,${row.ImageData.toString("base64")}`;
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).send(err.message);
   }
-
-  return {
-    ...row,
-    ImageData: imageBase64
-  };
 });
 
-res.json(data);
+// Dedicated endpoint to fetch binary image on-demand when editing
+app.get("/dishimage/:dishId", async (req, res) => {
+  try {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input("DishId", sql.UniqueIdentifier, req.params.dishId)
+      .query(`
+        SELECT I.ImageData
+        FROM DishMaster D
+        JOIN ImageList I ON D.ImageId = I.ImageId
+        WHERE D.DishId = @DishId
+      `);
+
+    if (result.recordset.length > 0 && result.recordset[0].ImageData) {
+      const base64 = `data:image/jpeg;base64,${result.recordset[0].ImageData.toString("base64")}`;
+      res.json({ ImageData: base64 });
+    } else {
+      res.json({ ImageData: null });
+    }
   } catch (err) {
+    console.error(err);
     res.status(500).send(err.message);
   }
 });

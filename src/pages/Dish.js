@@ -90,16 +90,11 @@ import { BASE_URL } from "../config/api";
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState("customize");
   const [dish, setDish] = useState(emptyDish);
-  const [dishes, setDishes] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [categoryImage, setDishImage] = useState(null);
-  const [buttonColor, setButtonColor] = useState("#2e7d32");
-  const [textColor, setTextColor] = useState("#fff");
-  const [displayName, setDisplayName] = useState(true);
   const [existingImage, setExistingImage] = useState(null);
   const [dishGroups, setDishGroups] = useState([]);
-  const [showDishGroupModal, setShowDishGroupModal] = useState(false);
-const [selectedDishGroups, setSelectedDishGroups] = useState([]);
+  const [selectedDishGroups, setSelectedDishGroups] = useState([]);
 
   const [dishmodifier, setdishModifiers] = useState([]);
   const [dishkitchens, setdishKitchens] = useState([]);
@@ -110,22 +105,19 @@ const [selectedDishGroups, setSelectedDishGroups] = useState([]);
   const [selecteddishModifiers, setSelecteddishModifiers] = useState([]);
   const [selecteddishKitchens, setSelecteddishKitchens] = useState([]);
 
-  const [orderItemShare, setOrderItemShare] = useState([]);
- const [selectedOrderItemShare, setSelectedOrderItemShare] = useState([]);
+  const [selectedOrderItemShare, setSelectedOrderItemShare] = useState([]);
 
   // 🔥 Per-dish Modifier Group selection config (DishModifierGroup table)
   // Shape: [{ ModifierGroupId, MinSelectionCount, MaxSelectionCount, MultiselectAllow, DishGroupName }]
   const [dishModifierGroups, setDishModifierGroups] = useState([]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-  if (showModal && !dish.DishId) {
-    setSelecteddishKitchens([]);
-    setSelecteddishModifiers([]);
-  }
-}, [showModal]);
- 
-  const colorPickerRef = useRef(null);
-  const textColorPickerRef = useRef(null);
+    if (showModal && !dish.DishId) {
+      setSelecteddishKitchens([]);
+      setSelecteddishModifiers([]);
+    }
+  }, [showModal]);
 
   const [filters, setFilters] = useState({});
   const [activeFilter, setActiveFilter] = useState(null);
@@ -145,7 +137,6 @@ const [selectedDishGroups, setSelectedDishGroups] = useState([]);
   const file = e.target.files[0];
  
     if (file) {
-      const url = URL.createObjectURL(file);
       setDishImage(file);   
     }
   };
@@ -156,7 +147,6 @@ const [selectedDishGroups, setSelectedDishGroups] = useState([]);
   };
  
   /* ❌ Apply All disabled */
-  const applyAll = () => {};
  
   const handleSave = async () => {
 
@@ -371,22 +361,7 @@ const handleDelete = async (id, e) => {
  
   const openNewDish = async () => {
   try {
-    // const res = await axios.get(`${BASE_URL}/dish/nextcode`);
-
-    try {
-      const shareRes = await axios.get(`${BASE_URL}/dishorderitemshare`);
-      console.log("SHARE DATA => ", shareRes.data);
-      setOrderItemShare(shareRes.data);
-    } catch (err) {
-      console.log("ORDER ITEM SHARE ERROR", err);
-      setOrderItemShare([]);
-    }
-
-    setDish({
-      ...emptyDish,
-       DishCode: ""    // 🔥 AUTO CODE SHOW
-    });
-
+    setDish(emptyDish);
     setSelecteddishKitchens([]);
     setSelecteddishModifiers([]);
     setSelectedDishGroups([]);
@@ -411,17 +386,18 @@ const handleDelete = async (id, e) => {
 const handleEdit = async (data) => {
   console.log("EDIT DATA =", data);
   setDish(data);
-  setExistingImage(data.ImageData);
+  setExistingImage(null); // Load on-demand below
+
+  try {
+    const imgRes = await axios.get(`${BASE_URL}/dishimage/${data.DishId}`);
+    if (imgRes.data && imgRes.data.ImageData) {
+      setExistingImage(imgRes.data.ImageData);
+    }
+  } catch (err) {
+    console.log("IMAGE FETCH ERROR", err);
+  }
 
   // Each call wrapped individually so one 500 won't block the modal
-  try {
-    const shareRes = await axios.get(`${BASE_URL}/dishorderitemshare`);
-    console.log("EDIT SHARE DATA => ", shareRes.data);
-    setOrderItemShare(shareRes.data);
-  } catch (err) {
-    console.log("ORDER ITEM SHARE ERROR", err);
-    setOrderItemShare([]);
-  }
 
   let kIds = [];
   try {
