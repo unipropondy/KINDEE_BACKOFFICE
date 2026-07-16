@@ -42,6 +42,7 @@ import TableMaster from "./pages/tablemaster";
 import Organization from "./pages/Organization";
 import DishOrderItemShare from "./pages/DishOrderItemShare";
 import QRCode from "./pages/QRCode";
+import PromoCodeMaster from "./pages/PromoCodeMaster";
 
 
 
@@ -110,6 +111,7 @@ function Layout() {
        <Route path="/Organization" element={<Organization />} />
        <Route path="/QRCode" element={<QRCode />} />
        <Route path="/DishOrderItemShare" element={<DishOrderItemShare />} />
+        <Route path="/PromoCodeMaster" element={<PromoCodeMaster />} />
        </Routes>
       </div>
     </>

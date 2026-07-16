@@ -47,6 +47,10 @@ app.use("/api/rewardpoints", rewardRoutes);
 const comboRoutes = require("./routes/comboRoutes");
  
 app.use("/api/combo", comboRoutes);
+
+const promoCodeRoute = require("./routes/promoCodeRoute");
+
+app.use("/api/promocode", promoCodeRoute);
  
 
 const vendorRoutes = require("./routes/vendorRoutes");
