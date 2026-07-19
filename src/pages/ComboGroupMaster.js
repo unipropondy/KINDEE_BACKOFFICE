@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../config/config";
+import { BASE_URL } from "../config/api";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { FaTrash, FaEdit, FaPlus, FaCheck, FaFolder, FaUtensils, FaArrowRight, FaChevronDown, FaChevronRight } from "react-icons/fa";
@@ -25,6 +25,9 @@ function ComboGroupMaster({ sidebarOpen }) {
   const [showMappingModal, setShowMappingModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showParentModal, setShowParentModal] = useState(false);
+  const [showAssignParentModal, setShowAssignParentModal] = useState(false);
+  const [assignedParentIds, setAssignedParentIds] = useState([]);
+  const [parentSearchQuery, setParentSearchQuery] = useState("");
   
   // Parent Combo Add State
   const [selectedNewParentDishId, setSelectedNewParentDishId] = useState("");
@@ -62,7 +65,7 @@ function ComboGroupMaster({ sidebarOpen }) {
   // ================= FETCH DATA =================
   const fetchParentDishes = useCallback(async () => {
     try {
-      const res = await axios.get(API_BASE_URL + "/api/combo/parent-dishes");
+      const res = await axios.get(BASE_URL + "/api/combo/parent-dishes");
       setParentDishes(res.data || []);
     } catch (err) {
       console.error("Fetch Parent Dishes Error:", err);
@@ -71,7 +74,7 @@ function ComboGroupMaster({ sidebarOpen }) {
 
   const fetchComboGroups = useCallback(async () => {
     try {
-      const res = await axios.get(API_BASE_URL + "/api/combo/groups");
+      const res = await axios.get(BASE_URL + "/api/combo/groups");
       setComboGroups(res.data || []);
     } catch (err) {
       console.error("Fetch Combo Groups Error:", err);
@@ -80,7 +83,7 @@ function ComboGroupMaster({ sidebarOpen }) {
 
   const fetchAvailableDishes = useCallback(async () => {
     try {
-      const res = await axios.get(API_BASE_URL + "/api/combo/available-dishes");
+      const res = await axios.get(BASE_URL + "/api/combo/available-dishes");
       setAvailableDishes(res.data || []);
     } catch (err) {
       console.error("Fetch Available Dishes Error:", err);
@@ -90,7 +93,7 @@ function ComboGroupMaster({ sidebarOpen }) {
   const fetchDishMappings = useCallback(async (groupId) => {
     if (!groupId) return;
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/combo/mappings/${groupId}`);
+      const res = await axios.get(`${BASE_URL}/api/combo/mappings/${groupId}`);
       setDishMappings(res.data || []);
     } catch (err) {
       console.error("Fetch Mappings Error:", err);
@@ -142,7 +145,7 @@ function ComboGroupMaster({ sidebarOpen }) {
       return;
     }
     try {
-      await axios.post(`${API_BASE_URL}/api/combo/parent-dishes`, { DishId: selectedNewParentDishId });
+      await axios.post(`${BASE_URL}/api/combo/parent-dishes`, { DishId: selectedNewParentDishId });
       setShowParentModal(false);
       setSelectedNewParentDishId("");
       setParentSearchSelect("");
@@ -158,7 +161,7 @@ function ComboGroupMaster({ sidebarOpen }) {
   const handleDeleteParentCombo = async (id) => {
     if (window.confirm("Are you sure you want to unmark this dish as a Parent Combo?")) {
       try {
-        await axios.delete(`${API_BASE_URL}/api/combo/parent-dishes/${id}`);
+        await axios.delete(`${BASE_URL}/api/combo/parent-dishes/${id}`);
         if (selectedParentId === id) {
           setSelectedParentId(null);
           setSelectedGroupId(null);
@@ -180,7 +183,7 @@ function ComboGroupMaster({ sidebarOpen }) {
         ParentComboDishId: group.ParentComboDishId,
         GroupName: group.GroupName,
         DisplayOrder: group.DisplayOrder || 0,
-        MinSelection: group.MinSelection !== undefined && group.MinSelection !== null ? group.MinSelection : 1,
+        MinSelection: group.MinSelection || 1,
         MaxSelection: group.MaxSelection || 1,
         IsMultiSelect: group.IsMultiSelect === true || group.IsMultiSelect === 1,
         IsActive: group.IsActive === true || group.IsActive === 1
@@ -212,9 +215,9 @@ function ComboGroupMaster({ sidebarOpen }) {
 
     try {
       if (groupForm.ComboGroupId) {
-        await axios.put(`${API_BASE_URL}/api/combo/groups/${groupForm.ComboGroupId}`, groupForm);
+        await axios.put(`${BASE_URL}/api/combo/groups/${groupForm.ComboGroupId}`, groupForm);
       } else {
-        const res = await axios.post(API_BASE_URL + "/api/combo/groups", groupForm);
+        const res = await axios.post(BASE_URL + "/api/combo/groups", groupForm);
         if (res.data && res.data.ComboGroupId) {
           setSelectedGroupId(res.data.ComboGroupId);
         }
@@ -231,7 +234,7 @@ function ComboGroupMaster({ sidebarOpen }) {
   const handleDeleteGroup = async (id) => {
     if (window.confirm("Are you sure you want to delete this group and all its mappings?")) {
       try {
-        await axios.delete(`${API_BASE_URL}/api/combo/groups/${id}`);
+        await axios.delete(`${BASE_URL}/api/combo/groups/${id}`);
         setSelectedGroupId(null);
         await fetchComboGroups();
         await fetchParentDishes();
@@ -239,6 +242,29 @@ function ComboGroupMaster({ sidebarOpen }) {
       } catch (err) {
         console.error("Delete Group Error:", err);
         alert("Failed to delete combo group.");
+      }
+    }
+  };
+
+  const handleRemoveParentMapping = async (parentId, groupId, groupName) => {
+    if (window.confirm(`Are you sure you want to remove the combo group "${groupName}" from this parent dish?`)) {
+      try {
+        const res = await axios.get(`${BASE_URL}/api/combo/groups/${groupId}/parents`);
+        const currentParents = res.data || [];
+        const updatedParents = currentParents.filter(id => id !== parentId);
+        
+        await axios.post(`${BASE_URL}/api/combo/groups/${groupId}/parents`, {
+          ParentDishIds: updatedParents
+        });
+        
+        if (selectedGroupId === groupId && selectedParentId === parentId) {
+          setSelectedGroupId(null);
+        }
+        await fetchComboGroups();
+        alert("Removed assignment successfully!");
+      } catch (err) {
+        console.error("Remove parent mapping error:", err);
+        alert("Failed to remove assignment.");
       }
     }
   };
@@ -259,7 +285,7 @@ function ComboGroupMaster({ sidebarOpen }) {
 
   const handleSaveMapping = async () => {
     try {
-      await axios.put(`${API_BASE_URL}/api/combo/mappings/${mappingForm.MappingId}`, mappingForm);
+      await axios.put(`${BASE_URL}/api/combo/mappings/${mappingForm.MappingId}`, mappingForm);
       setShowMappingModal(false);
       fetchDishMappings(selectedGroupId);
     } catch (err) {
@@ -271,7 +297,7 @@ function ComboGroupMaster({ sidebarOpen }) {
   const handleDeleteMapping = async (id) => {
     if (window.confirm("Are you sure you want to remove this dish mapping?")) {
       try {
-        await axios.delete(`${API_BASE_URL}/api/combo/mappings/${id}`);
+        await axios.delete(`${BASE_URL}/api/combo/mappings/${id}`);
         fetchDishMappings(selectedGroupId);
       } catch (err) {
         console.error("Delete Mapping Error:", err);
@@ -287,7 +313,7 @@ function ComboGroupMaster({ sidebarOpen }) {
       return;
     }
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/combo/mappings/batch`, {
+      const response = await axios.post(`${BASE_URL}/api/combo/mappings/batch`, {
         ComboGroupId: selectedGroupId,
         DishIds: selectedAvailableDishIds,
         Surcharge: batchSurcharge,
@@ -322,6 +348,41 @@ function ComboGroupMaster({ sidebarOpen }) {
 
   const toggleExpandParent = (parentId) => {
     setExpandedParents(prev => ({ ...prev, [parentId]: !prev[parentId] }));
+  };
+
+  const openAssignParentModal = async () => {
+    if (!selectedGroupId) return;
+    try {
+      const res = await axios.get(`${BASE_URL}/api/combo/groups/${selectedGroupId}/parents`);
+      setAssignedParentIds(res.data || []);
+      setParentSearchQuery("");
+      setShowAssignParentModal(true);
+    } catch (err) {
+      console.error("Fetch Assigned Parents Error:", err);
+      alert("Failed to load assigned parents.");
+    }
+  };
+
+  const handleSaveAssignedParents = async () => {
+    try {
+      await axios.post(`${BASE_URL}/api/combo/groups/${selectedGroupId}/parents`, {
+        ParentDishIds: assignedParentIds
+      });
+      setShowAssignParentModal(false);
+      await fetchComboGroups(); // Refresh tree view/groups
+      alert("Parent dishes assigned successfully!");
+    } catch (err) {
+      console.error("Save Assigned Parents Error:", err);
+      alert("Failed to assign parent dishes.");
+    }
+  };
+
+  const toggleParentAssignment = (parentId) => {
+    setAssignedParentIds(prev =>
+      prev.includes(parentId)
+        ? prev.filter(id => id !== parentId)
+        : [...prev, parentId]
+    );
   };
 
   // Filters
@@ -441,7 +502,7 @@ function ComboGroupMaster({ sidebarOpen }) {
                             className="delete-group-tree-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteGroup(group.ComboGroupId);
+                              handleRemoveParentMapping(parent.DishId, group.ComboGroupId, group.GroupName);
                             }}
                             style={{ background: 'none', border: 'none', color: '#ffffff', opacity: 0.7, cursor: 'pointer', padding: 0 }}
                           >
@@ -484,6 +545,9 @@ function ComboGroupMaster({ sidebarOpen }) {
                   <button className="btn-edit-group" onClick={() => openGroupModal(selectedGroup)}>
                     <FaEdit /> Edit Group
                   </button>
+                  <button className="btn-assign-parent" onClick={openAssignParentModal}>
+                    <FaPlus /> Assign Parent
+                  </button>
                   <button 
                     className="btn-delete" 
                     style={{ margin: 0, padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -519,26 +583,10 @@ function ComboGroupMaster({ sidebarOpen }) {
               </div>
 
               {/* MAPPINGS WORKSPACE */}
-<div
-  className="mappings-workspace"
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    flex: 1,
-    overflow: "hidden",
-    padding: "20px",
-  }}
->
-  <div
-    className="current-mappings-panel"
-    style={{
-      borderRight: "none",
-      display: "flex",
-      flexDirection: "column",
-      flex: 1,
-      overflow: "hidden",
-    }}
-  >
+              <div className="mappings-workspace" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', padding: '20px' }}>
+                
+                {/* CURRENT MAPPINGS LIST */}
+                <div className="current-mappings-panel" style={{ borderRight: 'none', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                   <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
                     <h4 style={{ margin: 0, fontSize: '16px' }}>Mapped Dishes ({dishMappings.length})</h4>
                     <button 
@@ -1025,7 +1073,90 @@ function ComboGroupMaster({ sidebarOpen }) {
           </div>
         </div>
       )}
+      {/* BATCH ADD MODAL END */}
+      {showAssignParentModal && (
+        <div className="modal-overlay" onClick={() => setShowAssignParentModal(false)}>
+          <div className="modal-content" style={{ width: '500px', maxWidth: '95%' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Assign Parent Dishes</h2>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-field" style={{ marginBottom: '16px' }}>
+                <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Combo Group:</label>
+                <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--primary-orange)' }}>
+                  {selectedGroup?.GroupName}
+                </div>
+              </div>
 
+              <div className="form-field" style={{ marginBottom: '16px' }}>
+                <label>Search Parent Dish</label>
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  placeholder="Search parent dishes..." 
+                  value={parentSearchQuery}
+                  onChange={(e) => setParentSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div 
+                className="dishes-checkbox-grid" 
+                style={{ 
+                  maxHeight: '250px', 
+                  overflowY: 'auto', 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px', 
+                  border: '1px solid var(--border-light)',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  background: '#fcfcfc'
+                }}
+              >
+                {parentDishes
+                  .filter(p => p.Name?.toLowerCase().includes(parentSearchQuery.toLowerCase()) || p.DishCode?.toLowerCase().includes(parentSearchQuery.toLowerCase()))
+                  .map(parent => {
+                    const isChecked = assignedParentIds.includes(parent.DishId);
+                    return (
+                      <div 
+                        key={parent.DishId} 
+                        className={`dish-checkbox-item ${isChecked ? "checked" : ""}`}
+                        onClick={() => toggleParentAssignment(parent.DishId)}
+                        style={{ 
+                          padding: '8px 12px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '10px',
+                          cursor: 'pointer',
+                          borderRadius: '6px',
+                          border: isChecked ? '1px solid var(--primary-orange)' : '1px solid transparent',
+                          background: isChecked ? 'rgba(255, 127, 39, 0.04)' : 'transparent'
+                        }}
+                      >
+                        <input 
+                          type="checkbox" 
+                          checked={isChecked}
+                          onChange={() => {}} 
+                        />
+                        <div className="dish-info" style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span className="dish-name" style={{ fontSize: '13px', fontWeight: '600' }}>{parent.Name}</span>
+                          <span className="dish-code" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{parent.DishCode}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ marginTop: '16px' }}>
+              <button className="btn-cancel" onClick={() => setShowAssignParentModal(false)}>Cancel</button>
+              <button className="btn-save" onClick={handleSaveAssignedParents}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

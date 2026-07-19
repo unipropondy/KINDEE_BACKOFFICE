@@ -1334,6 +1334,7 @@ app.get("/dish", async (req, res) => {
         D.IsgroupDish,
         D.IsShowinKiosk,
         D.IsActive,
+        D.IsSoldOut,
         D.iskitchenPrint,
         D.isDiscountAllowed,
         D.IsTaxAllowed,
@@ -1466,6 +1467,8 @@ app.post("/dish", upload.single("image"), async (req, res) => {
         .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("IsActive", sql.Bit, Number(d.IsActive) === 1)
+        .input("IsSoldOut", sql.Bit, Number(d.IsSoldOut) === 1)
+        
         .input("iskitchenPrint", sql.Bit, Number(d.iskitchenPrint) === 1)
         .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
         .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
@@ -1493,6 +1496,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
             NameInOtherLanguage=@NameInOtherLanguage,
             ImageId = COALESCE(@ImageId, ImageId),
             IsActive=@IsActive,
+            IsSoldOut =@IsSoldOut,
             iskitchenPrint=@iskitchenPrint,
             isDiscountAllowed=@isDiscountAllowed,
             IsTaxAllowed=@IsTaxAllowed,
@@ -1526,6 +1530,8 @@ app.post("/dish", upload.single("image"), async (req, res) => {
         .input("NameInOtherLanguage", sql.NVarChar, d.NameInOtherLanguage || "")
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("IsActive", sql.Bit, Number(d.IsActive) === 1)
+        .input("IsSoldOut", sql.Bit, Number(d.IsSoldOut) === 1)
+        
         .input("iskitchenPrint", sql.Bit, Number(d.iskitchenPrint) === 1)
         .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
         .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
@@ -1545,7 +1551,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
           INSERT INTO DishMaster (
             DishId, DishCode, Name, ShortName, Description,
             DishGroupId, CurrentCost, SordCode, UnitCost, QuantityOnHand,
-            NameInOtherLanguage, IsActive, iskitchenPrint,
+            NameInOtherLanguage, IsActive, IsSoldOut,iskitchenPrint,
             isDiscountAllowed, IsTaxAllowed, IsStockDish,
             isFOC, isServiceCharge, isFavourite, isMultiPrice, isOpenitem,IsSplitDish, IsgroupDish,
             ImageId, KitchenType, SubkitchenType,CreatedOn
@@ -1553,7 +1559,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
           VALUES (
             @DishId, @DishCode, @Name, @ShortName, @Description,
             @DishGroupId, @CurrentCost, @SordCode, @UnitCost, @QuantityOnHand,
-            @NameInOtherLanguage, @IsActive, @iskitchenPrint,
+            @NameInOtherLanguage, @IsActive,@IsSoldOut, @iskitchenPrint,
             @isDiscountAllowed, @IsTaxAllowed, @IsStockDish,
             @isFOC, @isServiceCharge, @isFavourite, @isMultiPrice, @isOpenitem,@IsSplitDish, @IsgroupDish,
             @ImageId, @KitchenType, @SubkitchenType,@CreatedOn

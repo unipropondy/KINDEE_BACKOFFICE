@@ -38,6 +38,7 @@ import { BASE_URL } from "../config/api";
     isFavourite: false,
     KitchenType: "General",
     SubkitchenType: "",
+    IsSoldOut: false,
   };
  
   const fetchDish = async () => {
@@ -197,6 +198,7 @@ import { BASE_URL } from "../config/api";
     formData.append("SubkitchenType", "");
     
     formData.set("IsActive", dish.IsActive ? 1 : 0);
+    formData.set("IsSoldOut", dish.IsSoldOut ? 1 : 0);
     formData.set("iskitchenPrint", dish.iskitchenPrint ? 1 : 0);
     formData.set("isDiscountAllowed", dish.isDiscountAllowed ? 1 : 0);
     formData.set("IsTaxAllowed", dish.IsTaxAllowed ? 1 : 0);
@@ -204,6 +206,9 @@ import { BASE_URL } from "../config/api";
     formData.set("isFOC", dish.isFOC ? 1 : 0);
     formData.set("isServiceCharge", dish.isServiceCharge ? 1 : 0);
     formData.set("isFavourite", dish.isFavourite ? 1 : 0);
+    
+    
+    
     
      const selectedKitchens = selecteddishKitchens.map(code => {
   const k = dishkitchens.find(x => Number(x.KitchenTypeCode) === code);
@@ -684,6 +689,22 @@ const totalRows = filteredData.length;
               )}
             </th>
 
+            <th onClick={() => setActiveFilter("IsSoldOut")}>
+              Sold Out
+              {activeFilter === "IsSoldOut" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.IsSoldOut || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, IsSoldOut: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
+            
+
             {/* Kitchen */}
             <th onClick={() => setActiveFilter("iskitchenPrint")}>
               Kitchen
@@ -831,6 +852,16 @@ const totalRows = filteredData.length;
                       onChange={(e) => {
                         e.stopPropagation();
                         handleToggle(d, "IsActive", e.target.checked);
+                      }}
+                    />
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={!!d.IsSoldOut}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleToggle(d, "IsSoldOut", e.target.checked);
                       }}
                     />
                   </td>
@@ -986,6 +1017,8 @@ const totalRows = filteredData.length;
                 {/* CHECKBOX GRID */}
                 <div className="dish-check-grid1">
                   <label><input type="checkbox" name="IsActive" checked={dish.IsActive} onChange={handleChange} /> Active</label>
+                  <label><input type="checkbox" name="IsSoldOut" checked={dish.IsSoldOut} onChange={handleChange} /> Sold Out</label>
+                  
                   <label><input type="checkbox" name="iskitchenPrint" checked={dish.iskitchenPrint} onChange={handleChange} /> kitchen</label>
                   <label><input type="checkbox" name="isDiscountAllowed" checked={dish.isDiscountAllowed} onChange={handleChange} /> Discount Allowed</label>
                   <label><input type="checkbox" name="IsTaxAllowed" checked={dish.IsTaxAllowed} onChange={handleChange} /> Tax</label>
