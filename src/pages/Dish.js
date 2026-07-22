@@ -29,6 +29,7 @@ import { BASE_URL } from "../config/api";
     IsgroupDish: false,
     IsShowinKiosk: false,
     IsActive: false,
+    IsPublished: false,
     iskitchenPrint: false,
     isDiscountAllowed: false,
     IsTaxAllowed: false,
@@ -198,6 +199,7 @@ import { BASE_URL } from "../config/api";
     formData.append("SubkitchenType", "");
     
     formData.set("IsActive", dish.IsActive ? 1 : 0);
+    formData.set("IsPublished", dish.IsPublished ? 1 : 0);
     formData.set("IsSoldOut", dish.IsSoldOut ? 1 : 0);
     formData.set("iskitchenPrint", dish.iskitchenPrint ? 1 : 0);
     formData.set("isDiscountAllowed", dish.isDiscountAllowed ? 1 : 0);
@@ -703,6 +705,20 @@ const totalRows = filteredData.length;
               )}
             </th>
 
+            <th onClick={() => setActiveFilter("IsPublished")}>
+              Hide in QR
+              {activeFilter === "IsPublished" && (
+                <input
+                  placeholder="yes / no"
+                  onClick={(e) => e.stopPropagation()}
+                  value={filters.IsPublished || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, IsPublished: e.target.value })
+                  }
+                />
+              )}
+            </th>
+
             
 
             {/* Kitchen */}
@@ -866,6 +882,17 @@ const totalRows = filteredData.length;
                     />
                   </td>
 
+                   <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={!!d.IsPublished}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleToggle(d, "IsPublished", e.target.checked);
+                      }}
+                    />
+                  </td>
+
                  <td onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
@@ -1018,7 +1045,7 @@ const totalRows = filteredData.length;
                 <div className="dish-check-grid1">
                   <label><input type="checkbox" name="IsActive" checked={dish.IsActive} onChange={handleChange} /> Active</label>
                   <label><input type="checkbox" name="IsSoldOut" checked={dish.IsSoldOut} onChange={handleChange} /> Sold Out</label>
-                  
+                  <label><input type="checkbox" name="IsPublished" checked={dish.IsPublished} onChange={handleChange} /> Hide in QR</label>
                   <label><input type="checkbox" name="iskitchenPrint" checked={dish.iskitchenPrint} onChange={handleChange} /> kitchen</label>
                   <label><input type="checkbox" name="isDiscountAllowed" checked={dish.isDiscountAllowed} onChange={handleChange} /> Discount Allowed</label>
                   <label><input type="checkbox" name="IsTaxAllowed" checked={dish.IsTaxAllowed} onChange={handleChange} /> Tax</label>

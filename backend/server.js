@@ -476,6 +476,7 @@ app.post("/category", upload.single("image"), async (req, res) => {
       CategoryName,
       SortCode,
       isActive,
+      IsPublished,
       ShortName,
       KitchenTypes,
       Modifiers,
@@ -535,6 +536,7 @@ let request = pool.request()
 .input("CategoryName", sql.VarChar(100), (CategoryName || "").substring(0,100))
 .input("SortCode", sql.Int, SortCode)
 .input("isActive", sql.Bit, Number(isActive) === 1)
+.input("IsPublished", sql.Bit, Number(IsPublished) === 1)
 .input("ShortName", sql.VarChar(50), (ShortName || "").substring(0,50))
 .input("BackColor", sql.NVarChar(50), safeBackColor)
 .input("ForeColor", sql.NVarChar(50), safeForeColor)
@@ -555,6 +557,7 @@ CategoryCode=@CategoryCode,
 CategoryName=@CategoryName,
 SortCode=@SortCode,
 isActive=@isActive,
+IsPublished =@IsPublished,
 ShortName=@ShortName,
 ImageId = COALESCE(@ImageId, ImageId),  
 BackColor=@BackColor,
@@ -577,6 +580,7 @@ WHERE CategoryId=@CategoryId
         .input("CategoryName", sql.VarChar(100), CategoryName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive ?? false)
+        .input("IsPublished", sql.Bit, IsPublished ?? false)
         .input("ShortName", sql.VarChar(50), ShortName)
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("BackColor", sql.NVarChar(50), safeBackColor)
@@ -592,9 +596,9 @@ WHERE CategoryId=@CategoryId
         .input("CreatedOn", sql.DateTime, new Date())
         .query(
           `INSERT INTO CategoryMaster 
-                (CategoryId, CategoryCode, CategoryName, SortCode, isActive, ShortName, ImageId, BackColor, ForeColor, isKitchenPrint, isDiscountAllowed, isServiceCharge, isDispName, isMemberSalesAllowed, isTaxAllowed, NameInOtherLanguage, CreatedBy, CreatedOn) 
+                (CategoryId, CategoryCode, CategoryName, SortCode, isActive,IsPublished, ShortName, ImageId, BackColor, ForeColor, isKitchenPrint, isDiscountAllowed, isServiceCharge, isDispName, isMemberSalesAllowed, isTaxAllowed, NameInOtherLanguage, CreatedBy, CreatedOn) 
             VALUES 
-            (@CategoryId, @CategoryCode, @CategoryName, @SortCode, @isActive, @ShortName, @ImageId, @BackColor, @ForeColor, @isKitchenPrint, @isDiscountAllowed, @isServiceCharge, @isDispName, @isMemberSalesAllowed, @isTaxAllowed, @NameInOtherLanguage, @CreatedBy, @CreatedOn)`
+            (@CategoryId, @CategoryCode, @CategoryName, @SortCode, @isActive, @IsPublished, @ShortName, @ImageId, @BackColor, @ForeColor, @isKitchenPrint, @isDiscountAllowed, @isServiceCharge, @isDispName, @isMemberSalesAllowed, @isTaxAllowed, @NameInOtherLanguage, @CreatedBy, @CreatedOn)`
         );
     }
 
@@ -882,6 +886,7 @@ app.get("/dishgroup", async (req, res) => {
         C.DishGroupName,
         C.ShortName,
         ISNULL(C.isActive, 0) AS isActive,
+        ISNULL(C.IsPublished, 0) AS IsPublished,
         ISNULL(C.isDiscountAllowed, 0) AS isDiscountAllowed,
         ISNULL(C.isTaxAllowed, 0) AS isTaxAllowed,
         ISNULL(C.isKitchenPrint, 0) AS isKitchenPrint,
@@ -973,6 +978,7 @@ app.post("/dishgroup", upload.single("image"), async (req, res) => {
       DishGroupName,
       SortCode,
       isActive,
+      IsPublished,
       isDiscountAllowed,      
       isTaxAllowed,           
       isKitchenPrint,         
@@ -1027,6 +1033,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
+        .input("IsPublished", sql.Bit, Number(IsPublished) === 1)
         .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == 1)
         .input("isTaxAllowed", sql.Bit, isTaxAllowed == 1)
         .input("isKitchenPrint", sql.Bit, isKitchenPrint == 1)
@@ -1048,6 +1055,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
                 DishGroupName=@DishGroupName,
                 SortCode=@SortCode,
                 isActive=@isActive,
+                IsPublished=@IsPublished,
                 isDiscountAllowed=@isDiscountAllowed,
                 isTaxAllowed=@isTaxAllowed,
                 isKitchenPrint=@isKitchenPrint,
@@ -1071,6 +1079,7 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("DishGroupName", sql.VarChar(100), DishGroupName)
         .input("SortCode", sql.Int, SortCode)
         .input("isActive", sql.Bit, isActive == 1)
+        .input("IsPublished", sql.Bit, Number(IsPublished) === 1)
         .input("isDiscountAllowed", sql.Bit, isDiscountAllowed == 1)
         .input("isTaxAllowed", sql.Bit, isTaxAllowed == 1)
         .input("isKitchenPrint", sql.Bit, isKitchenPrint == 1)
@@ -1092,10 +1101,10 @@ const imageBuffer = fs.readFileSync(req.file.path);
         .input("CreatedOn", sql.DateTime, new Date())
         .query(`
           INSERT INTO DishGroupMaster
-          (DishGroupId,DishGroupCode,DishGroupName,SortCode,isActive,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
+          (DishGroupId,DishGroupCode,DishGroupName,SortCode,isActive,IsPublished,ShortName,CategoryId,KitchenSortCode,BackColor,ForeColor,ImageId,isDiscountAllowed,
           isTaxAllowed,isKitchenPrint,isServiceCharge,isMemberSalesAllowed,CreatedBy,CreatedOn)
           VALUES
-          (@DishGroupId,@DishGroupCode,@DishGroupName,@SortCode,@isActive,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
+          (@DishGroupId,@DishGroupCode,@DishGroupName,@SortCode,@isActive,@IsPublished,@ShortName,@CategoryId,@KitchenSortCode,@BackColor,@ForeColor,@ImageId,@isDiscountAllowed,
           @isTaxAllowed,@isKitchenPrint,@isServiceCharge,@isMemberSalesAllowed,@CreatedBy,@CreatedOn)
         `);
     }
@@ -1334,6 +1343,7 @@ app.get("/dish", async (req, res) => {
         D.IsgroupDish,
         D.IsShowinKiosk,
         D.IsActive,
+        D.IsPublished,
         D.IsSoldOut,
         D.iskitchenPrint,
         D.isDiscountAllowed,
@@ -1468,7 +1478,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("IsActive", sql.Bit, Number(d.IsActive) === 1)
         .input("IsSoldOut", sql.Bit, Number(d.IsSoldOut) === 1)
-        
+        .input("IsPublished", sql.Bit, Number(d.IsPublished) === 1)
         .input("iskitchenPrint", sql.Bit, Number(d.iskitchenPrint) === 1)
         .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
         .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
@@ -1497,6 +1507,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
             ImageId = COALESCE(@ImageId, ImageId),
             IsActive=@IsActive,
             IsSoldOut =@IsSoldOut,
+            IsPublished=@IsPublished,
             iskitchenPrint=@iskitchenPrint,
             isDiscountAllowed=@isDiscountAllowed,
             IsTaxAllowed=@IsTaxAllowed,
@@ -1531,7 +1542,8 @@ app.post("/dish", upload.single("image"), async (req, res) => {
         .input("ImageId", sql.UniqueIdentifier, imageId)
         .input("IsActive", sql.Bit, Number(d.IsActive) === 1)
         .input("IsSoldOut", sql.Bit, Number(d.IsSoldOut) === 1)
-        
+        .input("IsPublished", sql.Bit, Number(d.IsPublished) === 1)
+
         .input("iskitchenPrint", sql.Bit, Number(d.iskitchenPrint) === 1)
         .input("KitchenType", sql.Int, Number(d.KitchenType) || 0)
         .input("SubkitchenType", sql.Int, Number(d.SubkitchenType) || 0)
@@ -1551,7 +1563,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
           INSERT INTO DishMaster (
             DishId, DishCode, Name, ShortName, Description,
             DishGroupId, CurrentCost, SordCode, UnitCost, QuantityOnHand,
-            NameInOtherLanguage, IsActive, IsSoldOut,iskitchenPrint,
+            NameInOtherLanguage, IsActive,IsPublished, IsSoldOut,iskitchenPrint,
             isDiscountAllowed, IsTaxAllowed, IsStockDish,
             isFOC, isServiceCharge, isFavourite, isMultiPrice, isOpenitem,IsSplitDish, IsgroupDish,
             ImageId, KitchenType, SubkitchenType,CreatedOn
@@ -1559,7 +1571,7 @@ app.post("/dish", upload.single("image"), async (req, res) => {
           VALUES (
             @DishId, @DishCode, @Name, @ShortName, @Description,
             @DishGroupId, @CurrentCost, @SordCode, @UnitCost, @QuantityOnHand,
-            @NameInOtherLanguage, @IsActive,@IsSoldOut, @iskitchenPrint,
+            @NameInOtherLanguage, @IsActive,@IsPublished, @IsSoldOut, @iskitchenPrint,
             @isDiscountAllowed, @IsTaxAllowed, @IsStockDish,
             @isFOC, @isServiceCharge, @isFavourite, @isMultiPrice, @isOpenitem,@IsSplitDish, @IsgroupDish,
             @ImageId, @KitchenType, @SubkitchenType,@CreatedOn
